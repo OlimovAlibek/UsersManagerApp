@@ -2,6 +2,8 @@ const express = require('express');
 const User = require('../models/User');
 const router = express.Router();
 
+
+
 // Create a new user
 router.post('/users', async (req, res) => {
     try {
@@ -47,26 +49,40 @@ router.get('/users/:id', async (req, res) => {
 });
 
 // Update a user by ID
+// Update a user by ID
 router.put('/users/:id', async (req, res) => {
     const { id } = req.params;
-    const { username, email, password, is_admin, is_blocked } = req.body; // Include all fields
-    
-    // Validate input
-    if (!username || !email || !password) {
-        return res.status(400).json({ error: 'Username, email, and password are required.' });
+    const { username, email, password, is_admin, is_blocked } = req.body;
+
+    // Validate at least one field
+    if (!username && !email && !password && is_admin === undefined && is_blocked === undefined) {
+        return res.status(400).json({ error: 'At least one field is required for update.' });
     }
-    
+
     try {
-        const updatedUser = await User.updateUser(id, username, email, password, is_admin || false, is_blocked || false);
+        const updatedUser = await User.updateUser(id, {
+            ...(username && { username }),
+            ...(email && { email }),
+            ...(password && { password }),
+            ...(is_admin !== undefined && { is_admin }),
+            ...(is_blocked !== undefined && { is_blocked }),
+        });
+
         if (!updatedUser) {
             return res.status(404).json({ error: 'User not found' });
         }
-        res.status(200).json(updatedUser);
-    } catch (err) {
-        console.error(err);
+
+        res.status(200).json({ message: 'User updated successfully', user: updatedUser });
+    } catch (error) {
+        console.error('Error updating user:', error);
         res.status(500).json({ error: 'Error updating user' });
     }
 });
+
+  
+
+
+
 
 // Delete a user by ID
 router.delete('/users/:id', async (req, res) => {
@@ -84,18 +100,15 @@ router.delete('/users/:id', async (req, res) => {
 });
 
 
-const authenticateToken = (req, res, next) => {
-    const token = req.header('Authorization')?.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'Access denied' });
+// user.js (routes)
 
-    try {
-        const verified = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = verified;
-        next();
-    } catch (err) {
-        res.status(400).json({ error: 'Invalid token' });
-    }
-};
+// Block a user by ID
+
+
+// Unblock a user by ID
+
+
+
 
 
 module.exports = router;
